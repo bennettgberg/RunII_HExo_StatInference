@@ -38,33 +38,58 @@ args = parser.parse_args()
 #fIn = ROOT.TFile.Open("skimmed_mmmt.root,"open")
 #filesloc = "histograms/"
 #filesloc = "histograms_array_nw/"
-filesloc = "histograms_2016_fits/"
+#filesloc = "histograms_2016_fits/"
 #fIn2 = ROOT.TFile.Open("skimmed_2016_prompt_mmmt.root","READ")
 
+#input skimmed root file
 fIn2 = ROOT.TFile.Open(args.input,"READ")
 
+#dictionary for all signal masses
 sigIn = {}
 
-
+#enter the desired directory (eg, inclusive)
 fIn2.cd(args.inputDir)
-hSignals = {}
+#hSignals = {}
 
 
 #sigIn["a40"] = [,38.0,42.0,40.0,ROOT.kMagenta]
-sigIn["a15"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a15"),13.0,17.0,15.0,ROOT.kRed]
-sigIn["a20"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a20"),18.0,22.0,20.0,ROOT.kOrange]
-sigIn["a25"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a25"),23.0,27.0,25.0,ROOT.kYellow]
-sigIn["a30"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a30"),28.0,32.0,30.0,ROOT.kGreen]
-sigIn["a35"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a35"),33.0,37.0,35.0,ROOT.kBlue]
-sigIn["a40"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a40"),38.0,42.0,40.0,ROOT.kMagenta]
-sigIn["a45"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a45"),43.0,47.0,45.0,ROOT.kViolet]
-sigIn["a50"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a50"),48.0,52.0,50.0,ROOT.kSpring]
-sigIn["a55"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a55"),53.0,57.0,55.0,ROOT.kCyan]
-sigIn["a60"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a60"),58.0,62.0,60.0,ROOT.kAzure]
 
-#getting the TTrees
+#set each entry in sigIn to TTree, low, high, center of mass bin, and color.
+#sigIn["a15"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a15"),13.0,65.0,15.0,ROOT.kRed]
+#sigIn["a20"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a20"),13.0,65.0,20.0,ROOT.kOrange]
+#sigIn["a25"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a25"),13.0,65.0,25.0,ROOT.kYellow]
+#sigIn["a30"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a30"),13.0,65.0,30.0,ROOT.kGreen]
+#sigIn["a35"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a35"),13.0,65.0,35.0,ROOT.kBlue]
+#sigIn["a40"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a40"),13.0,65.0,40.0,ROOT.kMagenta]
+#sigIn["a45"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a45"),13.0,65.0,45.0,ROOT.kViolet]
+#sigIn["a50"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a50"),13.0,65.0,50.0,ROOT.kSpring]
+#sigIn["a55"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a55"),13.0,65.0,55.0,ROOT.kCyan]
+#sigIn["a60"] = [fIn2.Get(args.inputDir+"/"+"Nominal_a60"),13.0,65.0,60.0,ROOT.kAzure]
+#one color for each mass point
+colors = [ #ROOT.kRed,
+    ROOT.kOrange,
+    ROOT.kYellow,
+    ROOT.kGreen,
+    ROOT.kBlue,
+    ROOT.kMagenta,
+    ROOT.kViolet,
+    ROOT.kSpring,
+    ROOT.kCyan,
+    ROOT.kAzure]
+ctr = 0
+for amass in range(20, 61, 5):
+    meanguess = float( amass - 10 )
+    if ctr < 1:
+        meanguess += 3.1
+    sigIn["a%d"%amass] = [fIn2.Get(args.inputDir + "/Nominal_a%d"%amass), 13., 65., meanguess, colors[ctr]]
+    ctr += 1
+
+#getting the TTree for data
 datatree = fIn2.Get(args.inputDir+"/"+"Nominal_data_obs")
+#don't know what's special about a40??
 sigtree = fIn2.Get(args.inputDir+"/"+"Nominal_a40")
+#datatree = fIn2.Get("data_obs")
+#sigtree = fIn2.Get("a40")
 #hInSig = fIn2.Get("a40")   # signal distribution included above!
 #tlist = ROOT.TList()
 #tlist.Add(fIn2.Get("Bkg"))
@@ -75,40 +100,60 @@ sigtree = fIn2.Get(args.inputDir+"/"+"Nominal_a40")
 
 #merging the ttrees to make a single background TTree
 #bkgtree = ROOT.TTree.MergeTrees(tlist)
+
+#get the TTrees for backgrounds.
 bkgtree = fIn2.Get(args.inputDir+"/"+"Nominal_Bkg")
+#bkgtree = fIn2.Get("Bkg")
+print("bkgtree: " + str(bkgtree))
 bkgtree.SetName("bkg")
 
 FFtree = fIn2.Get(args.inputDir+"/"+"Nominal_Bkg")
+#FFtree = fIn2.Get("Bkg")
 ZZtree = fIn2.Get(args.inputDir+"/"+"Nominal_irBkg")
+#ZZtree = fIn2.Get("irBkg")
 
 fitParams = {}
 dataHists = {}
-fitModels = {}
+#fitModels = {}
 pdfs = {}
 
+#set the fit parameters for each of the signal masses
 for file in sigIn.keys():
     fitParams[file] = [
-        ROOT.RooRealVar("mll",    "m_{#mu #mu}", sigIn[file][1], sigIn[file][2]),#works for fine binning
+        #ROOT.RooRealVar("mll",    "m_{#mu #mu}", sigIn[file][1], sigIn[file][2]),#works for fine binning
+            #RooRealVar constructor arguments: name, title, minval, maxval
+        ROOT.RooRealVar("mll",    "m_{#tau_1 #tau_2}", sigIn[file][1], sigIn[file][2]),#works for fine binning
         #ROOT.RooRealVar("MH",    "m_{#mu #mu}", sigIn[file][3], sigIn[file][1], sigIn[file][2], "GeV"),
         #ROOT.RooRealVar("MH",    "m_{#mu #mu}", 14.0, 63.0),
         #ROOT.RooRealVar("mll",    "m_{#mu #mu}", 38.0, 42.0),
-        ROOT.RooRealVar("g1Mean_"+str(file),   "mean of first gaussian",    sigIn[file][3], sigIn[file][1], sigIn[file][2], "GeV"),
-        ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#mu #mu}",1.0, 0.0,  10.0, "GeV")
+            #alternative RooRealVar constructor: name, title, starting value, minval, maxval, units
+        #ROOT.RooRealVar("g1Mean_"+str(file),   "mean of first gaussian",    sigIn[file][3], sigIn[file][1], sigIn[file][2], "GeV"),
+        #limit mean to be ~lower than the a mass!
+        ROOT.RooRealVar("g1Mean_"+str(file),   "mean of first gaussian",    sigIn[file][3], sigIn[file][1], sigIn[file][3]+15., "GeV"),
+        #ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#mu #mu}",1.0, 0.0,  10.0, "GeV")
+        ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#tau_1 #tau_2}",5.0, 0.0,  20.0, "GeV")  ,
+        #need to add a few more vars for 4tau fit
+        ROOT.RooRealVar("b0_"+str(file), "coeff 0 of Bernstein Polynomial", 5, 0.0, 10.0),
+        ROOT.RooRealVar("b1_"+str(file), "coeff 1 of Bernstein Polynomial", 1, 0.0, 10.0),
+        ROOT.RooRealVar("b2_"+str(file), "coeff 2 of Bernstein Polynomial", 1, 0.0, 10.0),
+        #variable for the ratio b/t gaussian and bernstein
+        ROOT.RooRealVar("sigcoeff_", "coeff between gaussian and Bernstein", 1.0, 0.0, 10.0) #what starting value to use??
         #ROOT.RooRealVar("lAlpha_"+str(file),   "#alpha of lorentz profile",     1.0, 0.0,      40.0)
         ]
 
-for file in sigIn.keys():
-    #dataHists[file] = [ROOT.RooDataHist("dh_"+str(file),"signal histo ",ROOT.RooArgList(fitParams[file][0]), hSignals[file])]
-    fitModels[file] = [
-        #ROOT.RooVoigtian(AMass,   "first voigtian PDF", MH, mean, alpha, sigma),
-        #ROOT.RooVoigtian("voigtian_"+str(file),   "first voigtian PDF", fitParams[file][0], fitParams[file][1], fitParams[file][3], fitParams[file][2]),
-        #(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)
-        #try the roo formula var down below when importing into rooworkspace
-        #ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])), 
-        #ROOT.RooFormulaVar("intMean","(@1+ @2*@0+@3*@0*@0+@4*@0*@0*@0)",ROOT.RooArgSet(fitParams[file][1])), 
-        ROOT.RooGaussian("gaussian_"+str(file),   "first gaussian PDF", fitParams[file][0], fitParams[file][1], fitParams[file][2]),
-        ROOT.RooRealVar("signalEvents_"+str(file), "",  sigtree.GetEntries(),   0.0, 1000.0),
-        ]
+#now set the fit models for each of the signal masses.
+#for file in sigIn.keys():
+#    #dataHists[file] = [ROOT.RooDataHist("dh_"+str(file),"signal histo ",ROOT.RooArgList(fitParams[file][0]), hSignals[file])]
+#    fitModels[file] = [
+#        #ROOT.RooVoigtian(AMass,   "first voigtian PDF", MH, mean, alpha, sigma),
+#        #ROOT.RooVoigtian("voigtian_"+str(file),   "first voigtian PDF", fitParams[file][0], fitParams[file][1], fitParams[file][3], fitParams[file][2]),
+#        #(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)
+#        #try the roo formula var down below when importing into rooworkspace
+#        #ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])), 
+#        #ROOT.RooFormulaVar("intMean","(@1+ @2*@0+@3*@0*@0+@4*@0*@0*@0)",ROOT.RooArgSet(fitParams[file][1])), 
+#        ROOT.RooGaussian("gaussian_"+str(file),   "first gaussian PDF", fitParams[file][0], fitParams[file][1], fitParams[file][2]),
+#        ROOT.RooRealVar("signalEvents_"+str(file), "",  sigtree.GetEntries(),   0.0, 1000.0),
+#        ]
 
 #needed for binned fit ...
 #for file in sigIn.keys():
@@ -123,8 +168,12 @@ for file in sigIn.keys():
 '''
 ######################################################################################################
 #data = ROOT.RooDataSet("data_obs","data",ROOT.RooArgSet(fitParams["a40"][0]), ROOT.RooFit.Import(datatree))
-Mmm = ROOT.RooRealVar("mll","m_{#mu#mu}", 16, 66)
+#Mmm = ROOT.RooRealVar("mll","m_{#mu#mu}", 16, 66)
+#make variable for invar mass of the muon pair 
+Mmm = ROOT.RooRealVar("mll","m_{#tau_1#tau_2}", 16, 66)
+#make variable for the final weight
 finalweight = ROOT.RooRealVar("finalweight","finalweight", 0.0, 3.0)
+#make a RooDataSet for data_obs
 data = ROOT.RooDataSet("data_obs","data",ROOT.RooArgSet(Mmm), ROOT.RooFit.Import(datatree))
 data.reduce("mll > 14 && mll < 63")
 #bkg = ROOT.RooDataSet("bkg","bkg ",ROOT.RooArgSet(fitParams["a40"][0]), ROOT.RooFit.Import(bkgtree))
@@ -148,11 +197,11 @@ for mass in sigIn.keys():
 
 #sig = ROOT.RooDataSet("sig","sig", varargset, ROOT.RooFit.Import(sigtree),ROOT.RooFit.WeightVar(finalweight))
 
-FF_Mmm = ROOT.RooRealVar("mll","m_{#mu#mu}", 16, 66)
+FF_Mmm = ROOT.RooRealVar("mll","m_{#tau_1#tau_2}", 16, 66)
 FF_finalweight = ROOT.RooRealVar("finalweight","finalweight", 0.0, 3.0)
 FF = ROOT.RooDataSet("FF","FF ",ROOT.RooArgSet(FF_Mmm,FF_finalweight), ROOT.RooFit.Import(FFtree), ROOT.RooFit.WeightVar("finalweight"))
 #FF.reduce("mll > 30 && mll < 40")
-ZZ_Mmm = ROOT.RooRealVar("mll","m_{#mu#mu}", 16, 66)
+ZZ_Mmm = ROOT.RooRealVar("mll","m_{#tau_1#tau_2}", 16, 66)
 ZZ_finalweight = ROOT.RooRealVar("finalweight","finalweight", 0.0, 3.0)
 ZZ = ROOT.RooDataSet("ZZ","ZZ ",ROOT.RooArgSet(ZZ_Mmm,ZZ_finalweight), ROOT.RooFit.Import(ZZtree), ROOT.RooFit.WeightVar("finalweight"))
 #FF.reduce("mll > 30 && mll < 40")
@@ -227,12 +276,43 @@ ZZfit = ROOT.RooBernstein("ZZfit","ZZfit",Mmm,ROOT.RooArgList(c0_ZZ_sq,c1_ZZ_sq,
 #                    fitParams["a40"][1], #mean
 #                    fitParams["a40"][3], #alpha
 #                    fitParams["a40"][2]) #sigma
-sigfit = {}
+sigfit = {} #sum of gaussian and bernstein, for full sig fit
+sigGauss = {} #gaussian for sig fit
+sigBerns = {} #bernstein poly for sig fit
 for mass in sigIn.keys():
-    sigfit[mass] = ROOT.RooGaussian("sigfit"+mass,   "sigfit"+mass,
+    #first make the gaussian
+    #sigfit[mass] = ROOT.RooGaussian("sigfit"+mass,   "sigfit"+mass,
+    sigGauss[mass] = ROOT.RooGaussian("sigGauss"+mass,   "sigGauss"+mass,
                         fitParams[mass][0], #mll
                         fitParams[mass][1], #mean
                         fitParams[mass][2]) #sigma
+    #now make the bernstein poly
+    sigBerns[mass] = ROOT.RooBernstein("sigBerns"+mass, "sigBerns"+mass,
+                        fitParams[mass][0], #mll
+                        ROOT.RooArgList( fitParams[mass][3], #b0
+                        fitParams[mass][4], #b1
+                        fitParams[mass][5])) #b2
+
+    #now add them together
+    sigfit[mass] = ROOT.RooAddPdf("sigfit"+mass, "sigfit"+mass, sigGauss[mass], sigBerns[mass], fitParams[mass][6])
+
+    #formula for the signal fit.
+    #sigFormula = "a*exp(-(x - b)^2 / 2c^2 + d*(1 - x)^2 + e*2x*(1 - x) + f*x^2"
+    #make each of the variables for the 6-d fit
+    #a: coeff b/t gaussian and bernstein poly
+   # varA = RooRealVar("varA", "varA", 0.0, 100.0 ) #?? what should max val be??
+   # #b: mean of gaussian
+   # varB = RooRealVar("varB", "varB", 0.0, 100.0 ) #??
+   # #c: sigma of gaussian
+   # varC = RooRealVar()
+   # varD = RooRealVar()
+   # varE = RooRealVar()
+   # varF = RooRealVar()
+   # #now put these 6 into an ArgList so can put them into the FormulaVar
+   # sigArgList = RooArgList()
+   # #finally instantiate the FormulaVar
+   # sigfit[mass] = ROOT.RooFormulaVar("sigfit"+mass, "sigfit"+mass, sigFormula, sigArgList)
+    
 
 # these may need to be RooABSPDFs ... not extended? for the unbinned fit...
 #bkgfitModel = ROOT.RooExtendPdf("bkg","bkg",bkgfit, norm_bkg)
@@ -246,7 +326,7 @@ for mass in sigIn.keys():
 ''' FF Plotting and Fitting Area
 '''
 ######################################################################################################
-overmass = ROOT.RooRealVar("mll",    "m_{#mu #mu} Total", 16.0, 66.0)
+overmass = ROOT.RooRealVar("mll",    "m_{#tau_1 #tau_2} Total", 16.0, 66.0)
 #overmass = ROOT.RooRealVar("MH",    "m_{#mu #mu} Total", 38.0, 42.0)
 massFrame = overmass.frame()
 #massFrame = fitParams["a40"][0].frame()
@@ -284,7 +364,7 @@ c.Clear()
 ''' ZZ Plotting and Fitting Area
 '''
 ######################################################################################################
-overmass = ROOT.RooRealVar("mll",    "m_{#mu #mu} Total", 16.0, 66.0)
+overmass = ROOT.RooRealVar("mll",    "m_{#tau_1 #tau_2} Total", 16.0, 66.0)
 #overmass = ROOT.RooRealVar("MH",    "m_{#mu #mu} Total", 38.0, 42.0)
 massFrame = overmass.frame()
 #massFrame = fitParams["a40"][0].frame()
@@ -326,7 +406,7 @@ c.Clear()
 '''
 ######################################################################################################
 for mass in sigIn.keys():
-    overmass = ROOT.RooRealVar("mll",    "m_{#mu #mu} Total", sigIn[mass][1], sigIn[mass][2])
+    overmass = ROOT.RooRealVar("mll",    "m_{#tau_1 #tau_2} Total", sigIn[mass][1], sigIn[mass][2])
     massFrame = overmass.frame()
     massFrame.Draw()
     massFrame = overmass.frame()
@@ -343,6 +423,10 @@ for mass in sigIn.keys():
 
     print "signal fit value mean",fitParams[mass][1].getVal()," error ",fitParams[mass][1].getError()
     print "signal fit value sigma",fitParams[mass][2].getVal()," error ",fitParams[mass][2].getError()
+    print "signal fit value b0",fitParams[mass][3].getVal()," error ",fitParams[mass][3].getError()
+    print "signal fit value b1",fitParams[mass][4].getVal()," error ",fitParams[mass][4].getError()
+    print "signal fit value b2",fitParams[mass][5].getVal()," error ",fitParams[mass][5].getError()
+    print "signal fit value coeff",fitParams[mass][6].getVal()," error ",fitParams[mass][6].getError()
 
 
 
@@ -404,6 +488,7 @@ from array import array
 #massFrame = overmass.frame()
 #massFrame = fitParams["a40"][0].frame()
 
+#meanfit = ROOT.TF1("meanfit","pol1",16,66)
 meanfit = ROOT.TF1("meanfit","pol1",16,66)
 #normfit = ROOT.TF1("normfit","pol0",0.00001,100000.0)
 normfit = ROOT.TF1("normfit","pol3",16,66)
@@ -412,9 +497,35 @@ meangraph = ROOT.TGraphErrors()
 normgraph = ROOT.TGraphErrors()
 sigmagraph = ROOT.TGraphErrors()
 
+#new for 4tau
+#coeffits = []
+#coefgraphs = []
+for i in range(3):
+    cfname = "b" + str(i) + "fit"
+    cfit = ROOT.TF1(cfname, "pol2", 16, 66)
+    cgraph = ROOT.TGraphErrors()
+    for num,mass in enumerate(sigIn.keys()):
+        cgraph.SetPoint(num, float(mass.split("a")[1]),fitParams[mass][3+i].getVal())
+        cgraph.SetPointError(num, 1.0, fitParams[mass][3+i].getError())
+    canname = "can" + str(i)
+    cx = ROOT.TCanvas(canname, canname, 600, 600)
+    cx.cd()
+    cgraph.Draw("AP")
+    cgraph.Fit(cfit)
+    coefname = "b" + str(i)
+    cfit.SetName(coefname)
+    cgraph.SetTitle(coefname)
+    cgraph.GetXaxis().SetTitle("Mass")
+    cgraph.GetYaxis().SetTitle("Mean Fit Parameter")
+    cfit.Draw("same")
+    fname = "DiMuonMass_" + coefname + "Constraint_" + args.output
+    cx.SaveAs(fname + ".png")
+    cx.SaveAs(fname + ".pdf")  
+
 for num, mass in enumerate(sigIn.keys()):
    meangraph.SetPoint(num,float(mass.split("a")[1]),fitParams[mass][1].getVal())
-   meangraph.SetPointError(num,1.0,fitParams[mass][1].getError())
+   #meangraph.SetPointError(num,1.0,fitParams[mass][1].getError())
+   meangraph.SetPointError(num,1.0,1.0)
    #print "sig sum entries ",sig[mass].sumEntries()
    normgraph.SetPoint(num,float(mass.split("a")[1]),sig[mass].sumEntries())
    normgraph.SetPointError(num,1.0,np.sqrt(sig[mass].sumEntries()))
@@ -493,7 +604,7 @@ s = {}
 #try the roo formula var down below when importing into rooworkspace
 #I need this for EACH mass point? like for the constants in the RooFormulaVar?
 MH = ROOT.RooRealVar("MH","MH", 18, 63)
-Mll = ROOT.RooRealVar("mll",    "m_{#mu #mu} Total", 16.0, 66.0)
+Mll = ROOT.RooRealVar("mll",    "m_{#tau_1 #tau_2} Total", 16.0, 66.0)
 MHerr = ROOT.RooRealVar("MHerr","MHerr", 0, -4 , 4)
 #ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])), 
 mean_c0 = meanfit.GetParameter(0)

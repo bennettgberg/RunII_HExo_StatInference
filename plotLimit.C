@@ -89,7 +89,7 @@ void plotLimit(string signame,string channel, int nsigma=0){
         //xsecs = {48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001}; //stop masses 800-1200
         //xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001}; //stop masses 800-1200
         //xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001}; //stop masses 800-1200
-      xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001}
+      xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001};
       }
 
     //ranges for plotting
@@ -114,8 +114,10 @@ void plotLimit(string signame,string channel, int nsigma=0){
     //setup plotting options
     string process, yname, xname;
     if(signame=="aa"){
-        process = "h #rightarrow a a #rightarrow 2#mu2#tau";
-        yname = "95% CL limit on #frac{#sigma_{h}}{#sigma_{sm}}B(h#rightarrow aa #rightarrow 2#mu 2#tau)";
+        //process = "h #rightarrow a a #rightarrow 2#mu2#tau";
+        process = "h #rightarrow a a #rightarrow 4#tau";
+        //yname = "95% CL limit on #frac{#sigma_{h}}{#sigma_{sm}}B(h#rightarrow aa #rightarrow 2#mu 2#tau)";
+        yname = "95% CL limit on #frac{#sigma_{h}}{#sigma_{sm}}B(h#rightarrow aa #rightarrow 4#tau)";
         xname = "m_{a} [GeV]";
     }
 
