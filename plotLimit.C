@@ -78,10 +78,14 @@ void getRange(int n, double* arr, double& ymin, double& ymax){
 
 //usage:
 //root -l 'plotLimit.C+("aa","mmmt",2)'
-void plotLimit(string signame,string channel, int nsigma=0){
+void plotLimit(string signame,string mainout, int year, int nsigma=0){
     //cross section values
     vector<double> masses = {};
     vector<double> xsecs = {};
+    //double xsecVal = 0.0001/48.37;
+    //double xsecVal = 0.0001/1.33;
+    double xsecVal = 0.0001;
+    //double xsecVal = 0.000005;
     if(signame=="aa") {
         //masses = {15,20,25,30,35,40,45,50,55,60};
         //masses = {20,25,30,35,40,45,50,55,60};
@@ -89,7 +93,7 @@ void plotLimit(string signame,string channel, int nsigma=0){
         //xsecs = {48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001,48.37*0.0001}; //stop masses 800-1200
         //xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001}; //stop masses 800-1200
         //xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001}; //stop masses 800-1200
-      xsecs = {0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001,0.0001};
+      xsecs = {xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal,xsecVal};
       }
 
     //ranges for plotting
@@ -99,7 +103,8 @@ void plotLimit(string signame,string channel, int nsigma=0){
 
     //extract info from hadded limit file
     //string fname = "cards/higgsCombine_"+signame+"_best.root";
-    string fname = "higgsCombine_"+signame+"_"+channel+"_best.root";
+    //string fname = "higgsCombine_"+signame+"_"+channel+"_best.root";
+    string fname = "higgsCombine_aa_"+mainout+"_best.root";
     TFile* file = TFile::Open(fname.c_str());
     if(!file) {
         cout << "Couldn't open " << fname << endl;
@@ -185,7 +190,9 @@ void plotLimit(string signame,string channel, int nsigma=0){
     TGraph* g_central = new TGraph(npts,mtmpC,rtmpC);
     g_central->SetLineColor(kBlue);
     g_central->SetLineStyle(2);
-    g_central->SetLineWidth(2);
+    g_central->SetLineWidth(4);
+    // g_central->SetLineStyle(1);
+    // g_central->SetLineWidth(6);
     leg->AddEntry(g_central,"Median expected","l");
     getRange(npts,rtmpC,ymin,ymax);
 
@@ -194,6 +201,7 @@ void plotLimit(string signame,string channel, int nsigma=0){
     if(nsigma>=1){
         g_one = getBand(limit,0.16,0.84,xsecs);
         g_one->SetFillColor(kGreen+1);
+        //g_one->SetFillColor(kWhite);
         leg->AddEntry(g_one,"68% expected","f");
         getRange(npts*2,g_one->GetY(),ymin,ymax);
     }
@@ -201,6 +209,7 @@ void plotLimit(string signame,string channel, int nsigma=0){
     if(nsigma>=2){
         g_two = getBand(limit,0.025,0.975,xsecs);
         g_two->SetFillColor(kOrange);
+        //g_two->SetFillColor(kRed);
         leg->AddEntry(g_two,"95% expected","f");
         getRange(npts*2,g_two->GetY(),ymin,ymax);
     }
@@ -219,7 +228,19 @@ void plotLimit(string signame,string channel, int nsigma=0){
     hbase->GetYaxis()->SetRangeUser(ymin,ymax);
 
     //make plot
-    Plot plot("plotLimit_"+signame+"_"+channel,35900,false,false);
+    cout<<"the year is "<<year<<endl;
+    int lumi = 10;
+    if(year==2016){
+      lumi = 35900;
+    }
+    if(year==2017){
+      lumi = 41800;
+    }
+    if(year==2018){
+      lumi = 59700;
+    }
+    //Plot plot("plotLimit_"+signame+"_"+channel,lumi,false,false);
+    Plot plot("plotLimit_"+signame+"_"+mainout,lumi,false,false);
     plot.Initialize(hbase);
     plot.SetLegend(leg);
     TCanvas* can = plot.GetCanvas();
@@ -239,7 +260,7 @@ void plotLimit(string signame,string channel, int nsigma=0){
     plot.GetHisto()->Draw("sameaxis"); //draw again so axes on top
     plot.DrawText();
     pave->Draw("same");
-
+    string yearstring = to_string(year);
     //print image
-    can->Print((plot.GetName()+".png").c_str(),"png");
+    can->Print((plot.GetName()+"_"+yearstring+".png").c_str(),"png");
 }

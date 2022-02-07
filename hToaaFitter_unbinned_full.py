@@ -389,9 +389,11 @@ from array import array
 
 meanfit = ROOT.TF1("meanfit","pol1",16,66)
 #normfit = ROOT.TF1("normfit","pol0",0.00001,100000.0)
-normfit = ROOT.TF1("normfit","pol1",16,66)
+normfit = ROOT.TF1("normfit","pol3",16,66)
+sigmafit = ROOT.TF1("sigmafit","pol3",16,66)
 meangraph = ROOT.TGraphErrors()
 normgraph = ROOT.TGraphErrors()
+sigmagraph = ROOT.TGraphErrors()
 
 for num, mass in enumerate(sigIn.keys()):
    meangraph.SetPoint(num,float(mass.split("a")[1]),fitParams[mass][1].getVal())
@@ -399,6 +401,8 @@ for num, mass in enumerate(sigIn.keys()):
    #print "sig sum entries ",sig[mass].sumEntries()
    normgraph.SetPoint(num,float(mass.split("a")[1]),sig[mass].sumEntries())
    normgraph.SetPointError(num,1.0,np.sqrt(sig[mass].sumEntries()))
+   sigmagraph.SetPoint(num,float(mass.split("a")[1]),fitParams[mass][2].getVal())
+   sigmagraph.SetPointError(num,1.0,np.sqrt(fitParams[mass][2].getError()))
 
 c = ROOT.TCanvas("c", "", 600, 600)
 c.cd()
@@ -440,6 +444,16 @@ c.SaveAs("DiMuonMass_NormConstraint_"+args.output+".pdf")
 c.SaveAs("DiMuonMass_NormConstraint_"+args.output+".png")
 c.Clear()
 
+sigmagraph.Draw("AP")
+sigmagraph.Fit(sigmafit)
+sigmafit.SetName("sigma")
+sigmafit.SetTitle("sigma")
+sigmafit.Draw("same")
+
+c.SaveAs("DiMuonMass_SigmaConstraint_"+args.output+".pdf")
+c.SaveAs("DiMuonMass_SigmaConstraint_"+args.output+".png")
+c.Clear()
+
 ######################################################################################################
 ''' Generating Signal Points from Interpolation
 '''
@@ -455,16 +469,18 @@ s = {}
 for mass in range(16,66):
    massEval = meanfit.Eval(mass)
    normEval = normfit.Eval(mass)
+   sigmaEval = sigmafit.Eval(mass)
    signalnorms[str(mass)] = normEval 
    print "evaluation of mean at ",mass," is ",massEval, " generating signal template "
    print "evaluation of norm at ",mass," is ",normEval
+   print "evaluation of sigma at ",mass," is ",sigmaEval
    #x[str(mass)] = ROOT.RooRealVar("x",    "x",massEval-2.0,massEval+2.0)
    x[str(mass)] = ROOT.RooRealVar("mll",    "mll",massEval-2.0,massEval+2.0)
    #x[str(mass)] = ROOT.RooRealVar("mll",    "mll",14.0,63.0)
    m[str(mass)] =ROOT.RooRealVar("mean",    "mean",massEval,"GeV")
    #m[str(mass)] = ROOT.RooRealVar("MH",    "signal mean", massEval, 14.0, 63.0,"GeV")
    #m[str(mass)] = ROOT.RooRealVar("MH",    "signal mean", massEval,massEval-2.0,massEval+2.0,"GeV")
-   s[str(mass)] = ROOT.RooRealVar("sigma",    "sigma",1.0,"GeV")
+   s[str(mass)] = ROOT.RooRealVar("sigma",    "sigma", sigmaEval,"GeV")
    signaltemplates[str(mass)] = ROOT.RooGaussian("sig_"+str(mass),   "sig_"+str(mass),x[str(mass)], m[str(mass)], s[str(mass)] )
         #ROOT.RooRealVar("mll",    "m_{#mu #mu}",massEval-2,massEval+2),#works for fine binning
         #Mmm,
@@ -524,10 +540,10 @@ for mass in signaltemplates.keys():
     getattr(workspace,'import')(signaltemplates[mass],ROOT.RooFit.RenameVariable("mean","MH"))
     #getattr(workspace,'import')(signaltemplates[mass])
 #try to rename mll to MH via
-getattr(workspace,'import')(ZZfit,ROOT.RooFit.RenameVariable("mll","MH"))
-getattr(workspace,'import')(FFfit,ROOT.RooFit.RenameVariable("mll","MH"))
-#getattr(workspace,'import')(ZZfit)
-#getattr(workspace,'import')(FFfit)
+#getattr(workspace,'import')(ZZfit,ROOT.RooFit.RenameVariable("mll","MH"))
+#getattr(workspace,'import')(FFfit,ROOT.RooFit.RenameVariable("mll","MH"))
+getattr(workspace,'import')(ZZfit)
+getattr(workspace,'import')(FFfit)
 
 #saving constraints
 #getattr(workspace,'import')(constraint_signal_0)
@@ -649,8 +665,8 @@ masses.sort()
 for mass in masses:
     workspace = ROOT.RooWorkspace("w")
 
-    getattr(workspace,'import')(data,ROOT.RooFit.RenameVariable("mll","MH"))
-    #getattr(workspace,'import')(data)
+    #getattr(workspace,'import')(data,ROOT.RooFit.RenameVariable("mll","MH"))
+    getattr(workspace,'import')(data)
     ZZfit.SetName("ZZ")
     FFfit.SetName("FF")
     signaltemplates[mass].SetName("sig")
@@ -659,10 +675,10 @@ for mass in masses:
     #getattr(workspace,'import')(signaltemplates[mass])
     getattr(workspace,'import')(signaltemplates[mass],ROOT.RooFit.RenameVariable("mean","MH"))
     #try to rename mll to MH via
-    getattr(workspace,'import')(ZZfit,ROOT.RooFit.RenameVariable("mll","MH"))
-    getattr(workspace,'import')(FFfit,ROOT.RooFit.RenameVariable("mll","MH"))
-    #getattr(workspace,'import')(ZZfit)
-    #getattr(workspace,'import')(FFfit)
+    #getattr(workspace,'import')(ZZfit,ROOT.RooFit.RenameVariable("mll","MH"))
+    #getattr(workspace,'import')(FFfit,ROOT.RooFit.RenameVariable("mll","MH"))
+    getattr(workspace,'import')(ZZfit)
+    getattr(workspace,'import')(FFfit)
 
     #workspace.Print()
 

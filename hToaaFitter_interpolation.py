@@ -141,7 +141,6 @@ for file in sigIn.keys():
         #ROOT.RooRealVar("lAlpha_"+str(file),   "#alpha of lorentz profile",     1.0, 0.0,      40.0)
         ]
 
-#now set the fit models for each of the signal masses.
 #for file in sigIn.keys():
 #    #dataHists[file] = [ROOT.RooDataHist("dh_"+str(file),"signal histo ",ROOT.RooArgList(fitParams[file][0]), hSignals[file])]
 #    fitModels[file] = [
@@ -149,8 +148,8 @@ for file in sigIn.keys():
 #        #ROOT.RooVoigtian("voigtian_"+str(file),   "first voigtian PDF", fitParams[file][0], fitParams[file][1], fitParams[file][3], fitParams[file][2]),
 #        #(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)
 #        #try the roo formula var down below when importing into rooworkspace
-#        #ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])), 
-#        #ROOT.RooFormulaVar("intMean","(@1+ @2*@0+@3*@0*@0+@4*@0*@0*@0)",ROOT.RooArgSet(fitParams[file][1])), 
+#        #ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])),
+#        #ROOT.RooFormulaVar("intMean","(@1+ @2*@0+@3*@0*@0+@4*@0*@0*@0)",ROOT.RooArgSet(fitParams[file][1])),
 #        ROOT.RooGaussian("gaussian_"+str(file),   "first gaussian PDF", fitParams[file][0], fitParams[file][1], fitParams[file][2]),
 #        ROOT.RooRealVar("signalEvents_"+str(file), "",  sigtree.GetEntries(),   0.0, 1000.0),
 #        ]
@@ -174,8 +173,10 @@ Mmm = ROOT.RooRealVar("mll","m_{#tau_1#tau_2}", 16, 66)
 #make variable for the final weight
 finalweight = ROOT.RooRealVar("finalweight","finalweight", 0.0, 3.0)
 #make a RooDataSet for data_obs
+
 data = ROOT.RooDataSet("data_obs","data",ROOT.RooArgSet(Mmm), ROOT.RooFit.Import(datatree))
-data.reduce("mll > 14 && mll < 63")
+#data.reduce("mll > 14 && mll < 63")
+
 #bkg = ROOT.RooDataSet("bkg","bkg ",ROOT.RooArgSet(fitParams["a40"][0]), ROOT.RooFit.Import(bkgtree))
 bkg = ROOT.RooDataSet("bkg","bkg ",ROOT.RooArgSet(Mmm), ROOT.RooFit.Import(bkgtree))
 bkg.reduce("mll > 14 && mll < 63")
@@ -440,10 +441,10 @@ for mass in sigIn.keys():
     c.Clear()
 
 ######################################################################################################
-'''Setting up the Interpolation 
+'''Setting up the Interpolation
 '''
 ######################################################################################################
-from array import array 
+from array import array
 #means = ROOT.RooDataSet("means","means",ROOT.RooArgSet(Mmmc))
 
 #tryfing with a tree
@@ -606,7 +607,7 @@ s = {}
 MH = ROOT.RooRealVar("MH","MH", 18, 63)
 Mll = ROOT.RooRealVar("mll",    "m_{#tau_1 #tau_2} Total", 16.0, 66.0)
 MHerr = ROOT.RooRealVar("MHerr","MHerr", 0, -4 , 4)
-#ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])), 
+#ROOT.RooFormulaVar("intMean","(1+0.002*Mean)*(%.8f +%.8f*MH+%.8f*MH*MH+%.8f*MH*MH*MH)",ROOT.RooArgSet(fitParams[file][1])),
 mean_c0 = meanfit.GetParameter(0)
 mean_c1 = meanfit.GetParameter(1)
 mean_c2 = meanfit.GetParameter(2)
@@ -639,7 +640,7 @@ for mass in range(16,66):
    massEval = meanfit.Eval(mass)
    normEval = normfit.Eval(mass)
    sigmaEval = sigmafit.Eval(mass)
-   signalnorms[str(mass)] = normEval 
+   signalnorms[str(mass)] = normEval
    print "evaluation of mean at ",mass," is ",massEval, " generating signal template "
    print "evaluation of norm at ",mass," is ",normEval
    print "evaluation of sigma at ",mass," is ",sigmaEval
@@ -659,7 +660,7 @@ for mass in range(16,66):
    #genNorm = 1000
    #signaldatasets[str(mass)] = ROOT.RooDataSet(signaltemplates[str(mass)].generate(ROOT.RooArgSet(x),genNorm))
    #signaltemplates[str(mass)].fitTo(signaldatasets[str(mass)], ROOT.RooFit.Range(massEval-2,massEval+2),ROOT.RooFit.Minimizer("Minuit2"), ROOT.RooFit.Save())
-   
+
 
 
 #overmass = ROOT.RooRealVar("MH",    "m_{#mu #mu} Total", 11.0, 65.0)
