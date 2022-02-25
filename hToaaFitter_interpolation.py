@@ -30,9 +30,26 @@ parser.add_argument("-dd",  "--datadriven", default=False,action='store_true',  
 parser.add_argument("-ddZH",  "--datadrivenZH", default=False,action='store_true',  help="Use DataDriven Method")
 parser.add_argument("-mc",  "--mc", default=False,action='store_true',  help="Use only mc skip data")
 parser.add_argument("-mhs",  "--mhs", default=False,action='store_true',  help="make file containing histograms for datacards")
+parser.add_argument("-sys",  "--systematics", default=False,action='store_true',  help="do systematics or nah")
 parser.add_argument("-fh",  "--fh", default=False,action='store_true',  help="Make Finalized histograms")
 parser.add_argument("-ss",  "--signalScale", default=1.0,  help="Scale the Signal")
 args = parser.parse_args()
+
+def findPull(nominal,up,down):
+    import numpy as np
+    val_nom = float(nominal.sumEntries())
+    val_up = float(up.sumEntries())
+    val_down = float(down.sumEntries())
+    s1 = float(val_nom-val_up)/float(val_nom)
+    s2 = float(val_nom - val_down)/float(val_nom)
+    return float(1.0000+np.sqrt(s1**2+s2**2))
+
+systematics = ["Nominal"]
+if args.systematics:
+    systematics =[ "Nominal","scale_eUp","scale_eDown","scale_m_etalt1p2Up","scale_m_etalt1p2Down",
+                   "scale_m_eta1p2to2p1Up","scale_m_eta1p2to2p1Down","scale_m_etagt2p1Up","scale_m_etagt2p1Down",
+                   "scale_t_1prongUp","scale_t_1prongDown","scale_t_1prong1pizeroUp","scale_t_1prong1pizeroDown",
+                   "scale_t_3prongUp","scale_t_3prongDown","scale_t_3prong1pizeroUp","scale_t_3prong1pizeroDown"]
 
 #fIn = ROOT.TFile.Open("ggTo2mu2tau_40_2016.root","open")
 #fIn = ROOT.TFile.Open("skimmed_mmmt.root,"open")
@@ -79,8 +96,10 @@ colors = [ #ROOT.kRed,
 ctr = 0
 for amass in range(20, 61, 5):
     meanguess = float( amass - 10 )
-    if ctr < 1:
-        meanguess += 3.1
+    #if ctr < 1:
+    if ctr < 4:
+        #meanguess += 3.1
+        meanguess += 4.
     sigIn["a%d"%amass] = [fIn2.Get(args.inputDir + "/Nominal_a%d"%amass), 13., 65., meanguess, colors[ctr]]
     ctr += 1
 
@@ -119,6 +138,7 @@ pdfs = {}
 
 #set the fit parameters for each of the signal masses
 for file in sigIn.keys():
+    mass = int(file[1:])
     fitParams[file] = [
         #ROOT.RooRealVar("mll",    "m_{#mu #mu}", sigIn[file][1], sigIn[file][2]),#works for fine binning
             #RooRealVar constructor arguments: name, title, minval, maxval
@@ -131,13 +151,15 @@ for file in sigIn.keys():
         #limit mean to be ~lower than the a mass!
         ROOT.RooRealVar("g1Mean_"+str(file),   "mean of first gaussian",    sigIn[file][3], sigIn[file][1], sigIn[file][3]+15., "GeV"),
         #ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#mu #mu}",1.0, 0.0,  10.0, "GeV")
-        ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#tau_1 #tau_2}",5.0, 0.0,  20.0, "GeV")  ,
+        #ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#tau_1 #tau_2}",5.0, 0.0,  20.0, "GeV")  ,
+        ROOT.RooRealVar("sigmaM_"+str(file),  "#sigma of m_{#tau_1 #tau_2}",10.0, 0.0,  20.0, "GeV")  ,
         #need to add a few more vars for 4tau fit
-        ROOT.RooRealVar("b0_"+str(file), "coeff 0 of Bernstein Polynomial", 5, 0.0, 10.0),
-        ROOT.RooRealVar("b1_"+str(file), "coeff 1 of Bernstein Polynomial", 1, 0.0, 10.0),
-        ROOT.RooRealVar("b2_"+str(file), "coeff 2 of Bernstein Polynomial", 1, 0.0, 10.0),
+        ROOT.RooRealVar("b0_"+str(file), "coeff 0 of Bernstein Polynomial", 5.*mass/20, 0.00001*mass/20, 10.0*mass/20),
+        ROOT.RooRealVar("b1_"+str(file), "coeff 1 of Bernstein Polynomial", 5.*mass/100, 0.00001*mass/20, 10.0*mass/20),
+        ROOT.RooRealVar("b2_"+str(file), "coeff 2 of Bernstein Polynomial", 5.*mass/100, 0.00001*mass/20, 10.0*mass/20),
         #variable for the ratio b/t gaussian and bernstein
-        ROOT.RooRealVar("sigcoeff_", "coeff between gaussian and Bernstein", 1.0, 0.0, 10.0) #what starting value to use??
+        #ROOT.RooRealVar("sigcoeff_"+str(file), "coeff between gaussian and Bernstein", 1.0, 0.000001, 10.0) #what starting value to use??
+        ROOT.RooRealVar("sigcoeff_"+str(file), "coeff between gaussian and Bernstein", 1.0, 0.000001, 10.0) #what starting value to use??
         #ROOT.RooRealVar("lAlpha_"+str(file),   "#alpha of lorentz profile",     1.0, 0.0,      40.0)
         ]
 
@@ -413,10 +435,19 @@ for mass in sigIn.keys():
     massFrame = overmass.frame()
 
     sig[mass].plotOn(massFrame)
+    #first do a preliminary fit to get the right order of magnitude
+    #fitresult = sigfit[mass].fitTo(sig[mass],ROOT.RooFit.Range(sigIn[mass][1],sigIn[mass][2]), ROOT.RooFit.Minimizer("Minuit2"), ROOT.RooFit.Save())
     fitresult = sigfit[mass].fitTo(sig[mass],ROOT.RooFit.Range(sigIn[mass][1],sigIn[mass][2]), ROOT.RooFit.Minimizer("Minuit2"), ROOT.RooFit.Save())
     #fitresult = sigfit[mass].fitTo(sig[mass],ROOT.RooFit.ExternalConstraints(ROOT.RooArgSet(constraint_signal_0)),ROOT.RooFit.Range(sigIn[mass][1],sigIn[mass][2]), ROOT.RooFit.Minimizer("Minuit2"), ROOT.RooFit.Save())
-
+    #now set the ranges of the parameters to be around the result of that preliminary fit.
+    for i in range(1, 7):
+        currval = fitParams[mass][i].getVal()
+        print "After preliminary signal fit value param ",i,": ",fitParams[mass][i].getVal()," error ",fitParams[mass][i].getError()
+        fitParams[mass][i].setRange(currval/1.5, currval*1.5)
+#now do a second fit to get the best value.
+    fitresult = sigfit[mass].fitTo(sig[mass],ROOT.RooFit.Range(sigIn[mass][1],sigIn[mass][2]), ROOT.RooFit.Minimizer("Minuit2"), ROOT.RooFit.Save())
     sigfit[mass].paramOn(massFrame)
+
     #cout<< rrv->getVal() <<"  +/-  "<<rrv->getError();
     print "sig "+mass+" fit results: "
     fitresult.Print()
@@ -490,7 +521,7 @@ from array import array
 #massFrame = fitParams["a40"][0].frame()
 
 #meanfit = ROOT.TF1("meanfit","pol1",16,66)
-meanfit = ROOT.TF1("meanfit","pol1",16,66)
+meanfit = ROOT.TF1("meanfit","pol3",16,66)
 #normfit = ROOT.TF1("normfit","pol0",0.00001,100000.0)
 normfit = ROOT.TF1("normfit","pol3",16,66)
 sigmafit = ROOT.TF1("sigmafit","pol3",16,66)
@@ -501,9 +532,15 @@ sigmagraph = ROOT.TGraphErrors()
 #new for 4tau
 #coeffits = []
 #coefgraphs = []
-for i in range(3):
+# list of all coefficients' (+ gaus/berns ratio) fit results
+sigBfits = []
+#how many parameters to use for the fit for each bernstein parameter.
+nparams = 3 #2
+for i in range(4):
     cfname = "b" + str(i) + "fit"
-    cfit = ROOT.TF1(cfname, "pol2", 16, 66)
+    if i == 3: cfname = "gbratiofit"
+    polname = "pol" + str(nparams)
+    cfit = ROOT.TF1(cfname, polname, 16, 66)
     cgraph = ROOT.TGraphErrors()
     for num,mass in enumerate(sigIn.keys()):
         cgraph.SetPoint(num, float(mass.split("a")[1]),fitParams[mass][3+i].getVal())
@@ -514,11 +551,13 @@ for i in range(3):
     cgraph.Draw("AP")
     cgraph.Fit(cfit)
     coefname = "b" + str(i)
+    if i == 3: coefname = "gbratio"
     cfit.SetName(coefname)
     cgraph.SetTitle(coefname)
     cgraph.GetXaxis().SetTitle("Mass")
     cgraph.GetYaxis().SetTitle("Mean Fit Parameter")
     cfit.Draw("same")
+    sigBfits.append(cfit)
     fname = "DiMuonMass_" + coefname + "Constraint_" + args.output
     cx.SaveAs(fname + ".png")
     cx.SaveAs(fname + ".pdf")  
@@ -631,11 +670,44 @@ norm_c3 = normfit.GetParameter(3)
 #intNorm = ROOT.RooFormulaVar("intNorm","({0:f}+ {1:f}*@0+{2:f}*@0*@0+{3:f}*@0*@0*@0)".format(norm_c0,norm_c1,norm_c2,norm_c3),ROOT.RooArgSet(MH,MHerr))
 intNorm = ROOT.RooFormulaVar("signal_norm","signal_norm","({0:f}+ {1:f}*@0+{2:f}*@0*@0+{3:f}*@0*@0*@0)".format(norm_c0,norm_c1,norm_c2,norm_c3),ROOT.RooArgList(MH))
 print "interpolated Mean formula ",intMean.Print()
-intSignalTemplate = ROOT.RooGaussian("signal",   "signal",Mll, intMean, intSigma )
+
+#new for 4tau:
+# list of variables for Bernstein component of signal model
+intBernVars = []
+for i in range(4):
+    ibvname = "intb" + str(i)
+    if i == 3: ibvname = "intgbratio"
+    bcoefs = []
+    for j in range(nparams):
+        param = sigBfits[i].GetParameter(j) 
+        print("got param: " + str(param))
+        bcoefs.append(param)
+    #generate the string for the formula
+    formulastr = "("
+    for j in range(nparams):
+        if j != 0:
+            formulastr += "+"
+        formulastr += "{0:f}".format(bcoefs[j])
+        #append a *@0 j times to form the correct polynomial term.
+        for k in range(j):
+            formulastr += "*@0"
+    formulastr += ")"
+    print("formulastr: " + formulastr)
+    intBernVars.append( ROOT.RooFormulaVar(ibvname, ibvname, formulastr, ROOT.RooArgList(MH)) )
+    print("appended the aforementioned formulastr.")
+
+intSigGauss = ROOT.RooGaussian("sigG",   "sigG",Mll, intMean, intSigma )
+#make a RooArgList for all the interpolated Bernstein variables
+ral = ROOT.RooArgList("ral")
+for i in range(len(intBernVars)-1):
+    ral.add(intBernVars[i])
+intSigBerns = ROOT.RooBernstein("sigB", "sigB", Mll, ral)
+#4tau case is more complicated.
+intSignalTemplate = ROOT.RooAddPdf("signal", "signal", intSigGauss, intSigBerns, intBernVars[-1]) 
 
 
 
-
+bn = {}
 for mass in range(16,66):
    massEval = meanfit.Eval(mass)
    normEval = normfit.Eval(mass)
@@ -645,12 +717,21 @@ for mass in range(16,66):
    print "evaluation of norm at ",mass," is ",normEval
    print "evaluation of sigma at ",mass," is ",sigmaEval
    #x[str(mass)] = ROOT.RooRealVar("x",    "x",massEval-2.0,massEval+2.0)
-   x[str(mass)] = ROOT.RooRealVar("mll",    "mll",massEval-2.0,massEval+2.0)
+   #x[str(mass)] = ROOT.RooRealVar("mll",    "mll",massEval-2.0,massEval+2.0)
+        #change range to 15-65 GeV for 4tau.
+   x[str(mass)] = ROOT.RooRealVar("mll",    "mll",15,65)
    #x[str(mass)] = ROOT.RooRealVar("mll",    "mll",14.0,63.0)
    m[str(mass)] =ROOT.RooRealVar("mean",    "mean",massEval,"GeV")
    #m[str(mass)] = ROOT.RooRealVar("MH",    "signal mean", massEval, 14.0, 63.0,"GeV")
    #m[str(mass)] = ROOT.RooRealVar("MH",    "signal mean", massEval,massEval-2.0,massEval+2.0,"GeV")
    s[str(mass)] = ROOT.RooRealVar("sigma",    "sigma", sigmaEval,"GeV")
+    #now for the bernstein coefficients + gaus/berns ratio
+   bn[str(mass)] = []
+   for i in range(4):
+       biEval = sigBfits[i].Eval(mass) 
+       bname = "b" + str(i)
+       if i == 3: bname = "gbratio"
+       bn[str(mass)].append( ROOT.RooRealVar(bname, bname, biEval) )
    #signaltemplates[str(mass)] = ROOT.RooGaussian("sig_"+str(mass),   "sig_"+str(mass),x[str(mass)], m[str(mass)], s[str(mass)] )
         #ROOT.RooRealVar("mll",    "m_{#mu #mu}",massEval-2,massEval+2),#works for fine binning
         #Mmm,
